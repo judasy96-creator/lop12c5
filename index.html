@@ -618,6 +618,29 @@
     </div>
   </div>
 
+  <!-- MODAL CHỌN TUẦN HIỆN TẠI -->
+  <div id="weekModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-5 md:p-6 space-y-4 border border-slate-100">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm md:text-base font-black text-slate-800"><i class="fa-regular fa-calendar-check text-amber-500 mr-1.5"></i>Chọn tuần hiện tại</h3>
+        <button onclick="closeWeekModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-black uppercase text-slate-500">Tuần số</label>
+        <select id="weekSelect" onchange="onWeekSelectChange()" class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"></select>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-black uppercase text-slate-500">Thứ Hai bắt đầu tuần</label>
+        <input type="date" id="weekDateInput" onchange="onWeekDateChange()" class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400">
+        <p id="weekPreview" class="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeWeekModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">Hủy</button>
+        <button onclick="saveWeekModal()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-rose-400 text-white text-xs font-black shadow-xs">Lưu tuần</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL ĐĂNG NHẬP -->
   <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-5 md:p-6 text-center space-y-4 border border-slate-100">
@@ -963,15 +986,51 @@
     const wkIso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const wkRange = c => wkFmt(wkDate(c.from, 0)) + '–' + wkFmt(wkDate(c.from, 5));
     function renderWeekBadge() {
-      const el = document.getElementById('weekBadge'); if (el) el.textContent = `Tuần ${curWeek.no} • ${wkRange(curWeek)}`;
+      const el = document.getElementById('weekBadge'); if (!el) return;
+      const isAdm = currentUser && currentUser.role === 'admin';
+      el.innerHTML = `Tuần ${curWeek.no} • ${wkRange(curWeek)}` + (isAdm ? ' <i class="fa-solid fa-pen text-[8px] ml-0.5"></i>' : '');
+      el.style.cursor = isAdm ? 'pointer' : 'default';
+      el.title = isAdm ? 'Bấm để chọn tuần hiện tại' : 'Tuần hiện tại';
+    }
+    // Tuần n bắt đầu vào thứ Hai: mốc = curWeek (no, from) -> from + (n - no) * 7 ngày
+    function wkMondayOf(n) { return wkDate(curWeek.from, (n - curWeek.no) * 7); }
+    function wkInputIso(d) { return wkIso(d); }
+    function updateWeekPreview() {
+      const n = parseInt(document.getElementById('weekSelect').value);
+      const v = document.getElementById('weekDateInput').value; if (!v) return;
+      const pv = document.getElementById('weekPreview');
+      pv.textContent = `Tuần ${n}: ${wkFmt(wkDate(v, 0))} – ${wkFmt(wkDate(v, 5))}/${wkDate(v, 5).getFullYear()}`;
     }
     function editWeek() {
       if (!currentUser || currentUser.role !== 'admin') return;
-      const n = parseInt(prompt('Số thứ tự tuần hiện tại?', curWeek.no)); if (!n) return;
-      const cur = wkFmt(wkDate(curWeek.from, 0)), v = prompt('Ngày thứ Hai bắt đầu tuần (ngày/tháng/năm, ví dụ 12/10/2026)?', cur + '/' + wkDate(curWeek.from, 0).getFullYear());
-      const m = v && v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) { alert('Ngày chưa đúng định dạng ngày/tháng/năm!'); return; }
-      curWeek = { no: n, from: m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') };
-      saveData(); renderWeekBadge();
+      const sel = document.getElementById('weekSelect');
+      const max = Math.max(40, curWeek.no + 5);
+      sel.innerHTML = '';
+      for (let i = 1; i <= max; i++) {
+        const o = document.createElement('option');
+        o.value = i; o.textContent = `Tuần ${i} (${wkFmt(wkMondayOf(i))} – ${wkFmt(wkDate(wkIso(wkMondayOf(i)), 5))})`;
+        sel.appendChild(o);
+      }
+      sel.value = curWeek.no;
+      document.getElementById('weekDateInput').value = curWeek.from;
+      updateWeekPreview();
+      document.getElementById('weekModal').classList.remove('hidden');
+    }
+    // Chọn tuần khác -> tự tính lại ngày thứ Hai theo mốc tuần hiện tại
+    function onWeekSelectChange() {
+      const n = parseInt(document.getElementById('weekSelect').value);
+      document.getElementById('weekDateInput').value = wkInputIso(wkMondayOf(n));
+      updateWeekPreview();
+    }
+    function onWeekDateChange() { updateWeekPreview(); }
+    function closeWeekModal() { document.getElementById('weekModal').classList.add('hidden'); }
+    function saveWeekModal() {
+      const n = parseInt(document.getElementById('weekSelect').value);
+      const v = document.getElementById('weekDateInput').value;
+      if (!n || !v) { alert('Vui lòng chọn tuần và ngày bắt đầu!'); return; }
+      if (wkDate(v, 0).getDay() !== 1 && !confirm('Ngày đã chọn không phải thứ Hai. Vẫn lưu?')) return;
+      curWeek = { no: n, from: v };
+      saveData(); renderWeekBadge(); closeWeekModal();
     }
     try { weeks = JSON.parse(localStorage.getItem('c5_weeks_v1') || '[]'); } catch(e) {}
     let wishes = [
@@ -1293,6 +1352,7 @@
     }
 
     function updateAuthUI() {
+      try { renderWeekBadge(); } catch(e) {}
       const container = document.getElementById('authStatusContainer');
       const adminGroup = document.getElementById('adminActionGroup');
       const btnClearHistory = document.getElementById('btnClearHistory');
