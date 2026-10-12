@@ -910,21 +910,16 @@
       { id: "p1", name: "Phát biểu", points: 0.5 },
       { id: "p2", name: "Điểm tốt", points: 2 },
       { id: "p3", name: "Giúp bạn", points: 1 },
-      { id: "p4", name: "Trực nhật sạch, được khen", points: 0.5 },
-      { id: "p5", name: "Khen thưởng từ giáo viên", points: 2 },
-      { id: "p6", name: "Trường khen", points: 10 }
-
+      { id: "p4", name: "Trực nhật", points: 0.5 },
+      { id: "p5", name: "Khen thưởng", points: 2 }
     ];
 
     const CRITERIA_MINUS = [
       { id: "m1", name: "Dùng điện thoại", points: -10 },
       { id: "m2", name: "Sai đồng phục", points: -5 },
       { id: "m3", name: "Không thuộc bài / Quên BTVN", points: -5 },
-      { id: "m4", name: "Đi học muộn", points: -50 },
-      { id: "m5", name: "Nói chuyện riêng", points: -20 },
-      { id: "m6", name: "Tự ý đổi chỗ", points: -20 },
-      { id: "m7", name: "Vô lễ với giáo viên", points: -100 }
-
+      { id: "m4", name: "Đi học muộn", points: -3 },
+      { id: "m5", name: "Nói chuyện riêng", points: -2 }
     ];
 
     const RAW_STUDENTS = [
@@ -2206,9 +2201,15 @@
     }
     function settleWeek() {
       if (!currentUser || currentUser.role !== 'admin') return;
-      if (!confirm('Tổng kết Tuần ' + curWeek.no + ' (' + wkRange(curWeek) + ') và công bố Bảng vàng?')) return;
       const lw = weeks[weeks.length - 1];
-      if (lw && !lw.started) { alert(`${lw.label} đã tổng kết nhưng chưa chuyển tuần mới. Hãy bấm "Bắt đầu Tuần ${weekNo(lw) + 1}" (hoặc Reset tuần) trước nhé!`); return; }
+      // Bảng vàng cũ chưa "chuyển tuần" nhưng số tuần KHÁC tuần hiện tại => dữ liệu cũ/lệch, cho phép xóa
+      if (lw && !lw.started && weekNo(lw) !== curWeek.no) {
+        if (!confirm(`Phát hiện Bảng vàng cũ "${lw.label}" không khớp tuần hiện tại (Tuần ${curWeek.no}).\n\nXóa Bảng vàng cũ đó và tổng kết Tuần ${curWeek.no}?\n(Điểm và nhật ký hiện tại vẫn được giữ nguyên)`)) return;
+        weeks = [];
+      } else if (lw && !lw.started) {
+        alert(`${lw.label} đã tổng kết rồi nhưng chưa chuyển tuần mới. Bấm "Reset tuần" để sang Tuần ${curWeek.no + 1}, hoặc bấm "Xem Bảng vàng" để xem lại.`); return;
+      }
+      if (!confirm('Tổng kết Tuần ' + curWeek.no + ' (' + wkRange(curWeek) + ') và công bố Bảng vàng?')) return;
       const no = curWeek.no;
       weeks = [buildWeekSnapshot(no)]; saveData(); openGoldBoard(weeks.length - 1, true);
     }
