@@ -274,7 +274,7 @@
                 <h3 class="text-xs md:text-sm font-black text-slate-800">Cổng Ban Cán Sự Lớp</h3>
                 <span class="text-[9px] md:text-[10px] font-bold bg-cyan-100 text-cyan-800 px-2 py-0.2 rounded-full">BCS & GVCN</span>
               </div>
-              <p class="text-[11px] text-slate-400 font-medium mt-0.5">Tổ trưởng, Tổ phó xem tổ mình; Lớp trưởng, Lớp phó, Bí thư, Thủ quỷ và GVCN quản lý cả lớp</p>
+              <p class="text-[11px] text-slate-400 font-medium mt-0.5">Tổ trưởng xem tổ mình; Lớp trưởng, Bí thư và GVCN quản lý cả lớp</p>
             </div>
           </div>
           <button onclick="openLoginModal()" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white rounded-xl md:rounded-2xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 shrink-0 active:scale-95">
@@ -891,7 +891,7 @@
       "loptruong": { pass: "123456", name: "Lớp Trưởng", role: "bcs", allowedTeam: "ALL" },
       "loppho": { pass: "123456", name: "Lớp Phó", role: "bcs", allowedTeam: "ALL" },
       "bithu": { pass: "123456", name: "Bí Thư Chi Đoàn", role: "bcs", allowedTeam: "ALL" },
-      "thuquy": { pass: "123456", name: "Thủ quỷ", role: "bcs", allowedTeam: "ALL" },
+      "thuquy": { pass: "123456", name: "Thủ quỹ", role: "bcs", allowedTeam: "ALL" },
       "loppholaodong": { pass: "123456", name: "Lớp phó lao động", role: "bcs", allowedTeam: "ALL" },
       "totruong1": { pass: "123456", name: "Tổ Trưởng 1", role: "totruong", allowedTeam: "Tổ 1" },
       "ptotruong1": { pass: "123456", name: "Tổ phó tổ 1", role: "totruong", allowedTeam: "Tổ 1" },
@@ -904,6 +904,14 @@
     };
 
     let USERS = JSON.parse(localStorage.getItem('c5_user_accounts_v25')) || DEFAULT_USERS;
+    // Bổ sung tài khoản mặc định còn thiếu (không ghi đè mật khẩu đã đổi)
+    function ensureDefaultUsers() {
+      let changed = false;
+      Object.keys(DEFAULT_USERS).forEach(k => { if (!USERS[k]) { USERS[k] = { ...DEFAULT_USERS[k] }; changed = true; } });
+      if (changed) { try { localStorage.setItem('c5_user_accounts_v25', JSON.stringify(USERS)); } catch (e) {} }
+      return changed;
+    }
+    ensureDefaultUsers();
     let currentUser = JSON.parse(sessionStorage.getItem('c5_session_user_v25')) || null;
     let pendingStudentId = null;
     let uploadedImageBase64 = null;
@@ -912,22 +920,16 @@
       { id: "p1", name: "Phát biểu", points: 0.5 },
       { id: "p2", name: "Điểm tốt", points: 2 },
       { id: "p3", name: "Giúp bạn", points: 1 },
-      { id: "p4", name: "Trực nhật sạch, được khen", points: 1 },
-      { id: "p5", name: "Thầy cô khen tiến bộ", points: 2 }, 
-      { id: "p6", name: "Trường khen", points: 10 },
-      { id: "p7", name: "Nhắn tin chúc mừng sinh nhật bạn", points: 1 },
-      { id: "p8", name: "Mạnh dạn bày tỏ tâm tư nguyện vọng", points: 1 }
+      { id: "p4", name: "Trực nhật", points: 0.5 },
+      { id: "p5", name: "Khen thưởng", points: 2 }
     ];
 
     const CRITERIA_MINUS = [
-      { id: "m1", name: "Dùng điện thoại", points: -50 },
+      { id: "m1", name: "Dùng điện thoại", points: -10 },
       { id: "m2", name: "Sai đồng phục", points: -5 },
       { id: "m3", name: "Không thuộc bài / Quên BTVN", points: -5 },
-      { id: "m4", name: "Đi học muộn", points: -50 },
-      { id: "m5", name: "Nói chuyện riêng", points: -5 },
-      { id: "m6", name: "Vô lễ", points: -100 },
-      { id: "m7", name: "Nộp quỹ trễ", points: -5 }
-
+      { id: "m4", name: "Đi học muộn", points: -3 },
+      { id: "m5", name: "Nói chuyện riêng", points: -2 }
     ];
 
     const RAW_STUDENTS = [
@@ -1098,6 +1100,7 @@
           if (data.curWeek && data.curWeek.no) curWeek = data.curWeek;
           if (data.users && typeof data.users === 'object') {
             USERS = data.users;
+            ensureDefaultUsers();
             localStorage.setItem('c5_user_accounts_v25', JSON.stringify(USERS));
           }
           timetableImage = data.timetableImage || null;
