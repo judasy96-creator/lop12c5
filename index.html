@@ -1528,6 +1528,7 @@
         return;
       }
 
+      ensureDefaultUsers();
       const container = document.getElementById('accountsListContainer');
       const bcsKeys = Object.keys(USERS).filter(k => k !== 'gvcn');
 
